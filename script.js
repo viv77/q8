@@ -2,63 +2,79 @@
 ====================================================
 Q8
 script.js
-Version 5.1
+Version 5.2
 ====================================================
 */
 
-const APP_VERSION = "5.1";
-
 const WORKER_URL =
-"https://q8-service.vivek-thakar-nsk.workers.dev";
+  "https://q8-service.vivek-thakar-nsk.workers.dev";
 
-/*-----------------------------------------------
-Generate Visitor ID (stored permanently)
------------------------------------------------*/
+const APP_VERSION = "5.2";
+
+const input = document.getElementById("pw");
+const out = document.getElementById("content");
+
+/*--------------------------------------------------
+Focus hidden password box
+--------------------------------------------------*/
+
+function focusInput() {
+    input.focus({ preventScroll: true });
+}
+
+/*--------------------------------------------------
+Visitor ID
+--------------------------------------------------*/
 
 function getVisitorId() {
 
-    let visitorId = localStorage.getItem("q8_visitor_id");
+    let id = localStorage.getItem("q8_visitor_id");
 
-    if (!visitorId) {
+    if (!id) {
 
-        visitorId =
-            "LOTUS-" +
-            Math.random()
-                .toString(36)
-                .substring(2, 10)
-                .toUpperCase();
+        if (window.crypto && crypto.randomUUID) {
 
-        localStorage.setItem(
-            "q8_visitor_id",
-            visitorId
-        );
+            id = "LOTUS-" + crypto.randomUUID();
+
+        } else {
+
+            id =
+                "LOTUS-" +
+                Date.now().toString(36) +
+                "-" +
+                Math.random().toString(36).substring(2, 8);
+
+        }
+
+        localStorage.setItem("q8_visitor_id", id);
 
     }
 
-    return visitorId;
+    return id;
 
 }
 
-/*-----------------------------------------------
-Generate Session ID (new every visit)
------------------------------------------------*/
+/*--------------------------------------------------
+Session ID
+--------------------------------------------------*/
 
 function getSessionId() {
+
+    if (window.crypto && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
 
     return (
         Date.now().toString(36) +
         "-" +
-        Math.random()
-            .toString(36)
-            .substring(2, 8)
-            .toUpperCase()
+        Math.random().toString(36).substring(2, 8)
     );
 
 }
 
-/*-----------------------------------------------
-Detect Device
------------------------------------------------*/
+/*--------------------------------------------------
+Device
+--------------------------------------------------*/
 
 function getDeviceType() {
 
@@ -70,112 +86,113 @@ function getDeviceType() {
         ua.includes("ipad") ||
         ua.includes("mobile")
     ) {
-
         return "Mobile";
-
     }
 
     return "Desktop";
 
 }
 
-/*-----------------------------------------------
-Current Page
------------------------------------------------*/
-
-function getPageName() {
-
-    const page = window.location.pathname;
-
-    if (
-        page === "/" ||
-        page.endsWith("index.html")
-    ) {
-
-        return "index";
-
-    }
-
-    return page.split("/").pop();
-
-}
-
-/*-----------------------------------------------
-Send Log
------------------------------------------------*/
+/*--------------------------------------------------
+Log Visit
+--------------------------------------------------*/
 
 async function logVisit() {
 
-    const payload = {
-
-        visitor_id: getVisitorId(),
-
-        session_id: getSessionId(),
-
-        page: getPageName(),
-
-        device_type: getDeviceType(),
-
-        app_version: APP_VERSION
-
-    };
-
     try {
 
-        const response =
-            await fetch(
-                WORKER_URL + "/api/v1/log",
-                {
-                    method: "POST",
+        await fetch(
+            WORKER_URL + "/api/v1/log",
+            {
+                method: "POST",
 
-                    headers: {
-                        "Content-Type":
-                        "application/json"
-                    },
+                headers: {
+                    "Content-Type": "application/json"
+                },
 
-                    body: JSON.stringify(payload)
-                }
-            );
+                body: JSON.stringify({
 
-        if (!response.ok) {
+                    visitor_id: getVisitorId(),
 
-            console.log(
-                "Q8 Log failed."
-            );
+                    session_id: getSessionId(),
 
-            return;
+                    page: "index",
 
-        }
+                    device_type: getDeviceType(),
 
-        const result =
-            await response.json();
+                    app_version: APP_VERSION
 
-        console.log(
-            "Q8 Logged:",
-            result
+                })
+
+            }
         );
 
     }
 
     catch (err) {
 
-        console.log(
-            "Q8 Worker unavailable."
-        );
+        console.log("Q8 logging skipped.");
 
     }
 
 }
 
-/*-----------------------------------------------
-Start
------------------------------------------------*/
+/*--------------------------------------------------
+Startup
+--------------------------------------------------*/
 
-window.addEventListener(
-    "load",
-    function () {
+window.addEventListener("load", () => {
 
-        logVisit();
+    document.title = "";
+
+    setTimeout(focusInput, 120);
+
+    logVisit();
+
+});
+
+document.body.addEventListener("click", focusInput);
+
+document.body.addEventListener(
+    "touchstart",
+    focusInput,
+    { passive: true }
+);
+
+/*--------------------------------------------------
+Password Handling
+--------------------------------------------------*/
+
+input.addEventListener("input", async () => {
+
+    let value = input.value.toUpperCase();
+
+    input.value = value.slice(-12);
+
+    for (const password of CONFIG.passwords) {
+
+        if (
+            value.endsWith(password.toUpperCase())
+        ) {
+
+            const html =
+                await fetch(CONFIG.contentFile)
+                .then(r => r.text());
+
+            out.innerHTML = html;
+
+            out.classList.remove("hidden");
+
+            requestAnimationFrame(() =>
+                out.classList.add("show")
+            );
+
+            input.blur();
+
+            return;
+
+        }
 
     }
-);
+
+});
