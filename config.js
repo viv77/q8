@@ -1,1 +1,1 @@
-const CONFIG={password:"VKK"};
+const CONFIG={passwords:["VKK"],contentFile:"content.html"};
