@@ -1,52 +1,39 @@
 /*
 ====================================================
-Q8
-script.js
+Q8 script.js
 Version 5.2
+Original behaviour preserved
+Added: Visitor logging only
 ====================================================
 */
-
-const WORKER_URL =
-  "https://q8-service.vivek-thakar-nsk.workers.dev";
-
-const APP_VERSION = "5.2";
 
 const input = document.getElementById("pw");
 const out = document.getElementById("content");
 
-/*--------------------------------------------------
-Focus hidden password box
---------------------------------------------------*/
+/* ---------- Logging ---------- */
 
-function focusInput() {
-    input.focus({ preventScroll: true });
-}
+const WORKER_URL =
+"https://q8-service.vivek-thakar-nsk.workers.dev";
 
-/*--------------------------------------------------
-Visitor ID
---------------------------------------------------*/
+const APP_VERSION = "5.2";
 
-function getVisitorId() {
+function visitorId() {
 
     let id = localStorage.getItem("q8_visitor_id");
 
     if (!id) {
 
-        if (window.crypto && crypto.randomUUID) {
+        id =
+            "LOTUS-" +
+            Math.random()
+            .toString(36)
+            .substring(2,10)
+            .toUpperCase();
 
-            id = "LOTUS-" + crypto.randomUUID();
-
-        } else {
-
-            id =
-                "LOTUS-" +
-                Date.now().toString(36) +
-                "-" +
-                Math.random().toString(36).substring(2, 8);
-
-        }
-
-        localStorage.setItem("q8_visitor_id", id);
+        localStorage.setItem(
+            "q8_visitor_id",
+            id
+        );
 
     }
 
@@ -54,48 +41,34 @@ function getVisitorId() {
 
 }
 
-/*--------------------------------------------------
-Session ID
---------------------------------------------------*/
-
-function getSessionId() {
-
-    if (window.crypto && crypto.randomUUID) {
-        return crypto.randomUUID();
-    }
+function sessionId() {
 
     return (
         Date.now().toString(36) +
-        "-" +
-        Math.random().toString(36).substring(2, 8)
+        Math.random()
+        .toString(36)
+        .substring(2,8)
+        .toUpperCase()
     );
 
 }
 
-/*--------------------------------------------------
-Device
---------------------------------------------------*/
+function deviceType() {
 
-function getDeviceType() {
+    const ua =
+        navigator.userAgent.toLowerCase();
 
-    const ua = navigator.userAgent.toLowerCase();
-
-    if (
+    if(
         ua.includes("android") ||
         ua.includes("iphone") ||
         ua.includes("ipad") ||
         ua.includes("mobile")
-    ) {
+    )
         return "Mobile";
-    }
 
     return "Desktop";
 
 }
-
-/*--------------------------------------------------
-Log Visit
---------------------------------------------------*/
 
 async function logVisit() {
 
@@ -104,23 +77,24 @@ async function logVisit() {
         await fetch(
             WORKER_URL + "/api/v1/log",
             {
-                method: "POST",
 
-                headers: {
-                    "Content-Type": "application/json"
+                method:"POST",
+
+                headers:{
+                    "Content-Type":"application/json"
                 },
 
-                body: JSON.stringify({
+                body:JSON.stringify({
 
-                    visitor_id: getVisitorId(),
+                    visitor_id:visitorId(),
 
-                    session_id: getSessionId(),
+                    session_id:sessionId(),
 
-                    page: "index",
+                    page:"index",
 
-                    device_type: getDeviceType(),
+                    device_type:deviceType(),
 
-                    app_version: APP_VERSION
+                    app_version:APP_VERSION
 
                 })
 
@@ -129,70 +103,85 @@ async function logVisit() {
 
     }
 
-    catch (err) {
-
-        console.log("Q8 logging skipped.");
-
-    }
+    catch(e){}
 
 }
 
-/*--------------------------------------------------
-Startup
---------------------------------------------------*/
+/* ---------- Original code ---------- */
 
-window.addEventListener("load", () => {
+function a(){
 
-    document.title = "";
+    input.focus({
+        preventScroll:true
+    });
 
-    setTimeout(focusInput, 120);
+}
+
+window.addEventListener("load",()=>{
+
+    document.title="";
+
+    setTimeout(a,120);
 
     logVisit();
 
 });
 
-document.body.addEventListener("click", focusInput);
+document.body.addEventListener(
+    "click",
+    a
+);
 
 document.body.addEventListener(
     "touchstart",
-    focusInput,
-    { passive: true }
+    a,
+    {passive:true}
 );
 
-/*--------------------------------------------------
-Password Handling
---------------------------------------------------*/
+input.addEventListener(
+    "input",
+    async()=>{
 
-input.addEventListener("input", async () => {
+        let v =
+            input.value.toUpperCase();
 
-    let value = input.value.toUpperCase();
+        input.value =
+            v.slice(-12);
 
-    input.value = value.slice(-12);
+        for(const p of CONFIG.passwords){
 
-    for (const password of CONFIG.passwords) {
+            if(
+                v.endsWith(
+                    p.toUpperCase()
+                )
+            ){
 
-        if (
-            value.endsWith(password.toUpperCase())
-        ) {
+                const h =
+                    await fetch(
+                        CONFIG.contentFile
+                    ).then(
+                        r=>r.text()
+                    );
 
-            const html =
-                await fetch(CONFIG.contentFile)
-                .then(r => r.text());
+                out.innerHTML=h;
 
-            out.innerHTML = html;
+                out.classList.remove(
+                    "hidden"
+                );
 
-            out.classList.remove("hidden");
+                requestAnimationFrame(
+                    ()=>out.classList.add(
+                        "show"
+                    )
+                );
 
-            requestAnimationFrame(() =>
-                out.classList.add("show")
-            );
+                input.blur();
 
-            input.blur();
+                return;
 
-            return;
+            }
 
         }
 
     }
-
-});
+);
