@@ -1,7 +1,7 @@
 /*
 ====================================================
 Q8 script.js
-Version 5.2
+Version 5.3
 Original behaviour preserved
 Added: Visitor logging only
 ====================================================
@@ -15,7 +15,7 @@ const out = document.getElementById("content");
 const WORKER_URL =
 "https://q8-service.vivek-thakar-nsk.workers.dev";
 
-const APP_VERSION = "5.2";
+const APP_VERSION = "5.3";
 
 function visitorId() {
 
