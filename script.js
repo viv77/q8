@@ -1,9 +1,10 @@
 /*
 ====================================================
 Q8 script.js
-Version 5.3
+Version 5.5
 Original behaviour preserved
 Added: Visitor logging only
+Improved: Fresh typing on every tap
 ====================================================
 */
 
@@ -15,7 +16,7 @@ const out = document.getElementById("content");
 const WORKER_URL =
 "https://q8-service.vivek-thakar-nsk.workers.dev";
 
-const APP_VERSION = "5.3";
+const APP_VERSION = "5.5";
 
 function visitorId() {
 
@@ -111,6 +112,8 @@ async function logVisit() {
 
 function a(){
 
+    input.value = "";
+
     input.focus({
         preventScroll:true
     });
@@ -146,14 +149,15 @@ input.addEventListener(
             input.value.toUpperCase();
 
         input.value =
-            v.slice(-12);
+            v.slice(-3);
+
+        v = input.value;
 
         for(const p of CONFIG.passwords){
 
             if(
-                v.endsWith(
-                    p.toUpperCase()
-                )
+                v ===
+                p.toUpperCase()
             ){
 
                 const h =
